@@ -1,0 +1,15 @@
+# k8s/service.yaml — Kubernetes service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: texno-market-service
+  namespace: production
+spec:
+  selector:
+    app: texno-market
+  ports:
+    - protocol:   TCP
+      port:       80
+      targetPort: 8000
+  type: LoadBalancer

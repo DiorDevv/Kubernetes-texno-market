@@ -1,0 +1,68 @@
+# docker-compose.yml — Local development uchun
+
+version: '3.9'
+
+services:
+
+  # Asosiy ilova
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://dev:dev123@postgres:5432/texno_dev
+      REDIS_URL:    redis://redis:6379
+      DEBUG:        "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./src:/app/src      # Hot reload uchun
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
+
+  # Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB:       texno_dev
+      POSTGRES_USER:     dev
+      POSTGRES_PASSWORD: dev123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d texno_dev"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Monitoring — Grafana
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  # Metrikalar — Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+volumes:
+  postgres_data:
+  grafana_data:

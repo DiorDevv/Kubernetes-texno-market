@@ -1,0 +1,358 @@
+# .github/workflows/pipeline.yml
+# Texno-Market — To'liq CI/CD Pipeline
+
+name: Texno-Market CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE_NAME: texno-market
+  REGISTRY:   ghcr.io/texno-market
+
+jobs:
+
+  # ════════════════════════════
+  #   CI — 1: KOD SIFATI
+  # ════════════════════════════
+  lint:
+    name: Kod sifati
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Kutubxonalar
+        run: pip install black flake8 isort mypy
+
+      - name: Black — formatlash
+        run: black --check src/ tests/
+
+      - name: isort — import tartibi
+        run: isort --check-only src/ tests/
+
+      - name: flake8 — linting
+        run: flake8 src/ tests/ --max-line-length=100
+
+      - name: mypy — tip tekshiruvi
+        run: mypy src/ --ignore-missing-imports
+
+
+  # ════════════════════════════
+  #   CI — 2: UNIT TESTLAR
+  # ════════════════════════════
+  unit-tests:
+    name: Unit testlar
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Kutubxonalar
+        run: pip install -r requirements.txt pytest pytest-cov
+
+      - name: Unit testlar
+        run: |
+          pytest tests/unit/ \
+            --cov=src \
+            --cov-report=xml \
+            --cov-fail-under=85 \
+            -v --tb=short
+          echo "✅ Unit testlar o'tdi"
+
+      - name: Qamrov Codecov ga
+        uses: codecov/codecov-action@v3
+        with:
+          file: coverage.xml
+
+
+  # ════════════════════════════
+  #   CI — 3: INTEGRATION
+  # ════════════════════════════
+  integration-tests:
+    name: Integration testlar
+    runs-on: ubuntu-latest
+    needs: unit-tests
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB:       texno_test
+          POSTGRES_USER:     test
+          POSTGRES_PASSWORD: test123
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Kutubxonalar
+        run: pip install -r requirements.txt pytest
+
+      - name: Integration testlar
+        env:
+          DATABASE_URL: postgresql://test:test123@localhost:5432/texno_test
+          REDIS_URL:    redis://localhost:6379
+        run: |
+          pytest tests/integration/ -v --tb=short
+          echo "✅ Integration testlar o'tdi"
+
+
+  # ════════════════════════════
+  #   CI — 4: E2E TESTLAR
+  # ════════════════════════════
+  e2e-tests:
+    name: E2E testlar
+    runs-on: ubuntu-latest
+    needs: integration-tests
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Playwright o'rnatish
+        run: |
+          pip install -r requirements.txt playwright pytest-playwright
+          playwright install chromium --with-deps
+
+      - name: Ilovani ishga tushirish
+        run: |
+          uvicorn src.app:app --port 8000 &
+          sleep 5
+          curl -f http://localhost:8000/health
+          echo "✅ Ilova tayyor"
+
+      - name: E2E testlar
+        run: |
+          pytest tests/e2e/ -v --tb=short
+          echo "✅ E2E testlar o'tdi"
+
+
+  # ════════════════════════════
+  #   CI — 5: XAVFSIZLIK
+  # ════════════════════════════
+  security:
+    name: Xavfsizlik
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Safety — kutubxona zaifliklar
+        run: |
+          pip install safety
+          safety check -r requirements.txt
+          echo "✅ Zaiflik topilmadi"
+
+      - name: Gitleaks — maxfiy ma'lumotlar
+        uses: gitleaks/gitleaks-action@v2
+
+      - name: Bandit — kod xavfsizligi
+        run: |
+          pip install bandit
+          bandit -r src/ -ll
+          echo "✅ Xavfsiz kod"
+
+
+  # ════════════════════════════
+  #   CI — 6: BUILD
+  # ════════════════════════════
+  build:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, security]
+
+    outputs:
+      version:   ${{ steps.version.outputs.version }}
+      image_tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Versiya
+        id: version
+        run: |
+          VERSION=$(date +%Y.%m.%d)-$(git rev-parse --short HEAD)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Versiya: $VERSION"
+
+      - name: Registry login
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build va push
+        uses: docker/build-push-action@v4
+        with:
+          context:    .
+          push:       true
+          tags:       ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+
+      - name: Image xavfsizlik skaneri
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref:  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          severity:   CRITICAL,HIGH
+          exit-code:  1
+
+
+  # ════════════════════════════
+  #   CD — 7: STAGING
+  # ════════════════════════════
+  staging:
+    name: Staging deploy
+    runs-on: ubuntu-latest
+    needs: build
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: kubectl sozlash
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" > ~/.kube/config
+
+      - name: Staging deploy
+        run: |
+          VERSION=${{ needs.build.outputs.version }}
+
+          kubectl set image deployment/texno-market \
+            app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION \
+            -n staging
+
+          kubectl rollout status deployment/texno-market \
+            -n staging --timeout=5m
+
+          echo "✅ Staging: $VERSION"
+
+      - name: Smoke test
+        run: |
+          URL="https://staging.texno-market.uz"
+          for ep in "/health" "/api/v1/status"; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL$ep")
+            [ "$CODE" == "200" ] \
+              && echo "✅ $ep → $CODE" \
+              || (echo "❌ $ep → $CODE" && exit 1)
+          done
+
+      - name: Slack — staging xabari
+        run: |
+          curl -s -X POST ${{ secrets.SLACK_WEBHOOK }} \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"🏗️ *Staging yangilandi!*\nVersiya: ${{ needs.build.outputs.version }}\nURL: https://staging.texno-market.uz\nTaskdiqlang ✅\"}"
+
+
+  # ════════════════════════════
+  #   CD — 8: PRODUCTION
+  # ════════════════════════════
+  production:
+    name: Production deploy
+    runs-on: ubuntu-latest
+    needs: staging
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url:  https://texno-market.uz
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: kubectl sozlash
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_PROD }}" > ~/.kube/config
+
+      - name: Production deploy
+        run: |
+          VERSION=${{ needs.build.outputs.version }}
+
+          kubectl set image deployment/texno-market \
+            app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION \
+            -n production
+
+          kubectl rollout status deployment/texno-market \
+            -n production --timeout=10m
+
+          echo "🚀 Production: $VERSION"
+
+      - name: Post-deploy monitoring (15 daqiqa)
+        run: |
+          echo "Monitoring boshlanmoqda..."
+          for i in 1 2 3; do
+            sleep 300
+            ERR=$(curl -s https://metrics.texno-market.uz/api/error_rate \
+                  | python3 -c "import sys,json; \
+                    print(json.load(sys.stdin).get('rate', 0))")
+            echo "[$i/3] Xato foizi: $ERR%"
+            if (( $(echo "$ERR > 2" | bc -l) )); then
+              echo "❌ Xato yuqori! Rollback..."
+              kubectl rollout undo deployment/texno-market -n production
+              exit 1
+            fi
+          done
+          echo "✅ 15 daqiqa barqaror!"
+
+      - name: Slack — muvaffaqiyat
+        if: success()
+        run: |
+          curl -s -X POST ${{ secrets.SLACK_WEBHOOK }} \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"🚀 *Production yangilandi!*\nVersiya: ${{ needs.build.outputs.version }}\nURL: https://texno-market.uz\n✅ Barcha testlar o'tdi\n📊 Monitoring: Normal\"}"
+
+      - name: Slack — rollback xabari
+        if: failure()
+        run: |
+          curl -s -X POST ${{ secrets.SLACK_WEBHOOK }} \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"⚠️ *Rollback qilindi!*\nVersiya: ${{ needs.build.outputs.version }}\nSabab: monitoring xato ko'rsatdi\nJamoa tekshirsin!\"}"

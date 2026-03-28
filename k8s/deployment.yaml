@@ -1,0 +1,68 @@
+# k8s/deployment.yaml — Kubernetes deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: texno-market
+  namespace: production
+  labels:
+    app: texno-market
+spec:
+  replicas: 3                       # 3 ta nusxa — yuqori mavjudlik
+  selector:
+    matchLabels:
+      app: texno-market
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge:       1             # Maksimal qo'shimcha pod
+      maxUnavailable: 0             # Hech qachon 0 ga tushmaydi!
+
+  template:
+    metadata:
+      labels:
+        app: texno-market
+    spec:
+      containers:
+        - name:  app
+          image: ghcr.io/texno-market/texno-market:latest
+          ports:
+            - containerPort: 8000
+
+          # Resurslar
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu:    "250m"
+            limits:
+              memory: "512Mi"
+              cpu:    "500m"
+
+          # Sog'liq tekshiruvi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds:       20
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds:       10
+
+          # Muhit o'zgaruvchilari (Secret dan)
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: texno-market-secrets
+                  key:  database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: texno-market-secrets
+                  key:  redis-url
