@@ -48,6 +48,7 @@ class TestTolovXizmati:
         assert ok is False
         assert "yaroqsiz" in xabar
 
+
     # ── Luhn algoritmi ──────────────────────────────
     def test_luhn_togri_karta(self):
         assert self.tolov._luhn_tekshir(4532015112830366) is True
