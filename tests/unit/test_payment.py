@@ -42,6 +42,7 @@ class TestTolovXizmati:
         assert ok is False
         assert "16" in xabar
 
+
     def test_notogri_luhn(self):
         # Luhn algoritmidan o'tmaydigan karta
         ok, xabar = self.tolov.tolov_tasdiqlash(50_000, 1234567890123456)
