@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 
+
 @dataclass
 class Buyurtma:
     foydalanuvchi_id: int
