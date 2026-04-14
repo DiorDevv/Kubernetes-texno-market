@@ -25,7 +25,7 @@ class TestXaridOqimi:
         """Muvaffaqiyatli to'lov jarayoni"""
         response = page.request.post(
             f"{BASE_URL}/api/v1/tolov",
-            data={
+            json={
                 "summa":       50_000,
                 "karta_raqam": 4532015112830366,
             },
@@ -38,7 +38,7 @@ class TestXaridOqimi:
         """Yomon karta rad etilishi kerak"""
         response = page.request.post(
             f"{BASE_URL}/api/v1/tolov",
-            data={
+            json={
                 "summa":       50_000,
                 "karta_raqam": 1234567890123456,
             },
@@ -49,7 +49,7 @@ class TestXaridOqimi:
         """To'liq buyurtma jarayoni"""
         response = page.request.post(
             f"{BASE_URL}/api/v1/buyurtma",
-            data={
+            json={
                 "foydalanuvchi_id": 1,
                 "mahsulotlar": [
                     {"id": 101, "narx": 500_000, "soni": 1}
@@ -67,7 +67,7 @@ class TestXaridOqimi:
         """Chegirma to'g'ri hisoblanadi"""
         response = page.request.post(
             f"{BASE_URL}/api/v1/chegirma",
-            data={"narx": 200_000, "foiz": 20},
+            json={"narx": 200_000, "foiz": 20},
         )
         assert response.status == 200
         data = response.json()
