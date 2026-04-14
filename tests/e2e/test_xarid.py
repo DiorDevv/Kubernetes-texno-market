@@ -1,8 +1,7 @@
 # tests/e2e/test_xarid.py
 # Playwright orqali to'liq brauzer testi
 
-import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 BASE_URL = "http://localhost:8000"
 

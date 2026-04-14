@@ -1,7 +1,5 @@
 # tests/unit/test_payment.py
 
-import pytest
-
 from src.payment import TolovXizmati
 
 
