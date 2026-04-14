@@ -3,9 +3,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from src.payment import TolovXizmati
 from src.buyurtma import BuyurtmaXizmati
 from src.chegirma import ChegirmaXizmati
+from src.payment import TolovXizmati
 
 app = FastAPI(
     title="Texno-Market API",
