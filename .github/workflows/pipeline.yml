@@ -172,10 +172,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Safety — kutubxona zaifliklar
+      - name: pip-audit — kutubxona zaifliklar
         run: |
-          pip install safety
-          safety check -r requirements.txt
+          pip install pip-audit
+          pip-audit -r requirements.txt
           echo "✅ Zaiflik topilmadi"
 
       - name: Gitleaks — maxfiy ma'lumotlar
