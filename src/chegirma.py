@@ -1,5 +1,6 @@
 # src/chegirma.py
 
+
 class ChegirmaXizmati:
     """
     Chegirma hisoblash xizmati.

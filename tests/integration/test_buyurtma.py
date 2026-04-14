@@ -9,8 +9,8 @@ class TestBuyurtmaIntegratsiya:
     def setup_method(self):
         self.xizmat = BuyurtmaXizmati()
         self.mahsulotlar = [
-            {"id": 101, "nomi": "iPhone 15",  "narx": 12_000_000, "soni": 1},
-            {"id": 205, "nomi": "Chexol",     "narx": 50_000,     "soni": 2},
+            {"id": 101, "nomi": "iPhone 15", "narx": 12_000_000, "soni": 1},
+            {"id": 205, "nomi": "Chexol", "narx": 50_000, "soni": 2},
         ]
 
     # ── Yaratish ────────────────────────────────────
@@ -22,7 +22,7 @@ class TestBuyurtmaIntegratsiya:
         )
         assert buyurtma.id is not None
         assert buyurtma.holati == "yangi"
-        assert buyurtma.jami_summa == 12_100_000   # 12M + 2×50k
+        assert buyurtma.jami_summa == 12_100_000  # 12M + 2×50k
         assert buyurtma.foydalanuvchi_id == 1
 
     def test_buyurtma_bazaga_saqlangani(self):
@@ -44,7 +44,7 @@ class TestBuyurtmaIntegratsiya:
     # ── Holat yangilash ─────────────────────────────
     def test_holat_yangilash(self):
         buyurtma = self.xizmat.yaratish(1, self.mahsulotlar, "Toshkent")
-        natija   = self.xizmat.holat_yangilash(buyurtma.id, "yetkazilmoqda")
+        natija = self.xizmat.holat_yangilash(buyurtma.id, "yetkazilmoqda")
         assert natija is True
         assert self.xizmat.olish(buyurtma.id).holati == "yetkazilmoqda"
 

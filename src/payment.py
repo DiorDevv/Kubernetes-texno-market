@@ -1,17 +1,16 @@
 # src/payment.py
 
+
 class TolovXizmati:
     """
     To'lovni tasdiqlash va boshqarish xizmati.
     """
 
     def __init__(self):
-        self.minimal_summa  = 1_000        # 1,000 so'm
-        self.maksimal_summa = 10_000_000   # 10,000,000 so'm
+        self.minimal_summa = 1_000  # 1,000 so'm
+        self.maksimal_summa = 10_000_000  # 10,000,000 so'm
 
-    def tolov_tasdiqlash(
-        self, summa: int, karta_raqam: int
-    ) -> tuple[bool, str]:
+    def tolov_tasdiqlash(self, summa: int, karta_raqam: int) -> tuple[bool, str]:
         """
         To'lovni tasdiqlaydi.
 

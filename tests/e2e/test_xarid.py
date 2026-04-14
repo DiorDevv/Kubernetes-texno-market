@@ -4,7 +4,6 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-
 BASE_URL = "http://localhost:8000"
 
 
@@ -26,7 +25,7 @@ class TestXaridOqimi:
         response = page.request.post(
             f"{BASE_URL}/api/v1/tolov",
             json={
-                "summa":       50_000,
+                "summa": 50_000,
                 "karta_raqam": 4532015112830366,
             },
         )
@@ -39,7 +38,7 @@ class TestXaridOqimi:
         response = page.request.post(
             f"{BASE_URL}/api/v1/tolov",
             json={
-                "summa":       50_000,
+                "summa": 50_000,
                 "karta_raqam": 1234567890123456,
             },
         )
@@ -51,9 +50,7 @@ class TestXaridOqimi:
             f"{BASE_URL}/api/v1/buyurtma",
             json={
                 "foydalanuvchi_id": 1,
-                "mahsulotlar": [
-                    {"id": 101, "narx": 500_000, "soni": 1}
-                ],
+                "mahsulotlar": [{"id": 101, "narx": 500_000, "soni": 1}],
                 "manzil": "Toshkent, Yunusobod 14",
             },
         )

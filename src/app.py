@@ -3,7 +3,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from src.payment  import TolovXizmati
+from src.payment import TolovXizmati
 from src.buyurtma import BuyurtmaXizmati
 from src.chegirma import ChegirmaXizmati
 
@@ -13,7 +13,7 @@ app = FastAPI(
 )
 
 # Xizmatlar
-tolov_xizmati   = TolovXizmati()
+tolov_xizmati = TolovXizmati()
 buyurtma_xizmati = BuyurtmaXizmati()
 chegirma_xizmati = ChegirmaXizmati()
 
@@ -30,8 +30,8 @@ def health_check():
 # To'lov endpoint
 # ──────────────────────────────────
 class TolovSo_rov(BaseModel):
-    summa:        int
-    karta_raqam:  int
+    summa: int
+    karta_raqam: int
 
 
 @app.post("/api/v1/tolov")
@@ -49,8 +49,8 @@ def tolov_qilish(so_rov: TolovSo_rov):
 # ──────────────────────────────────
 class BuyurtmaSo_rov(BaseModel):
     foydalanuvchi_id: int
-    mahsulotlar:      list
-    manzil:           str
+    mahsulotlar: list
+    manzil: str
 
 
 @app.post("/api/v1/buyurtma")
@@ -63,8 +63,8 @@ def buyurtma_yaratish(so_rov: BuyurtmaSo_rov):
         )
         return {
             "buyurtma_id": buyurtma.id,
-            "holati":      buyurtma.holati,
-            "jami_summa":  buyurtma.jami_summa,
+            "holati": buyurtma.holati,
+            "jami_summa": buyurtma.jami_summa,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -89,13 +89,11 @@ class ChegirmaSo_rov(BaseModel):
 @app.post("/api/v1/chegirma")
 def chegirma_hisoblash(so_rov: ChegirmaSo_rov):
     try:
-        natija = chegirma_xizmati.chegirma_hisoblash(
-            so_rov.narx, so_rov.foiz
-        )
+        natija = chegirma_xizmati.chegirma_hisoblash(so_rov.narx, so_rov.foiz)
         return {
-            "asl_narx":       so_rov.narx,
+            "asl_narx": so_rov.narx,
             "chegirma_foizi": so_rov.foiz,
-            "yangi_narx":     natija,
+            "yangi_narx": natija,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
